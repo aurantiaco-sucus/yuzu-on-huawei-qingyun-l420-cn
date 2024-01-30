@@ -16,7 +16,7 @@
 # 配置编译环境
 通过`bookworm-run`命令，可以进入ACE的Debian 12用户空间。
 
-![[qy2.png]]
+![（图片：bubblewrap、用户空间、ACE）](/qy2.png?raw=true "bubblewrap、用户空间、ACE")
 使用apt包管理器安装编译依赖：
 ```
 sudo apt-get install autoconf cmake g++-11 gcc-11 git glslang-tools libasound2 libboost-context-dev libglu1-mesa-dev libhidapi-dev libpulse-dev libtool libudev-dev libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 libxext-dev libxkbcommon-x11-0 mesa-common-dev nasm ninja-build qtbase5-dev qtbase5-private-dev qtwebengine5-dev qtmultimedia5-dev libmbedtls-dev catch2 libfmt-dev liblz4-dev nlohmann-json3-dev libzstd-dev libssl-dev libavfilter-dev libavcodec-dev libswscale-dev
@@ -32,9 +32,10 @@ ninja
 编译完成后，在项目build/bin文件夹可见yuzu二进制文件，但由于链接了来自Debian用户空间的库，这个yuzu只能在ACE内运行。此时启动yuzu，熟悉的”你没有密钥“弹窗应该会如约出现，这里请自行按照一般方法配置yuzu。
 # 配置Vulkan支持
 配置完成，细心的读者大略已经发现，yuzu的图像设置中Vulkan只有一个Mesa的软件渲染实现。若是用软件渲染运行游戏，那至少在这个8核心的移动处理器上是不好实现的。但好消息是麒麟9006c的Mali-G78 GPU具备Vulkan 1.2支持，已经足以运行目前版本的yuzu了。此时我们需要在容器内部利用Mali专有用户态驱动程序（libmali.so）来提供Vulkan支持。
-![[qy1.png]]
+![（图片：Vulkan支持）](/qy1.png?raw=true "Vulkan支持")
 首先，我们需要修改ACE bubblewrap的运行脚本，将`/dev/mali0`这个由内核驱动提供的设备文件暴露到容器内。脚本位于`/opt/apps/cn.flamescion.bookworm-compatibility-mode/files/bin/bookworm-run`。笔者在实验的时候直接修改了这个文件，但实际上这样做大概不是最好的办法，个人建议还是复制这个文件到便于访问的地方，然后将这个位置添加到PATH。
-![[2024-01-30_19-45-51.png]]如图所示，添加这个设备绑定。
+![（图片：设备绑定）](/2024-01-30_19-45-51.png?raw=true "设备绑定")
+如图所示，添加这个设备绑定。
 
 这个操作完成之后，我们还需要实际把Mali专有用户态驱动程序也暴露到容器内。笔者采取了较为暴力的方法，直接将文件复制到了容器内（容器的根为`/opt/apps/cn.flamescion.bookworm-compatibility-mode/files/bookworm-env`）但读者也可以采取通过上面的配置文件（添加绑定）的方式来完成。具体需要提供的文件如下：
 * /usr/lib/aarch64-linux-gnu/libmali.so
@@ -50,6 +51,7 @@ ninja
 QT_QPA_PLATFORM=wayland ./yuzu
 ```
 此时读者应该已经可以正常运行软件了，但可能又会发现一个问题：
+![（图片：陌生的SE）](/2024-01-30_20-07-53.png?raw=true "陌生的SE")
 ![[2024-01-30_20-07-53.png]]
 > 这个SQUARE ENIX标志怎么变蓝了
 
